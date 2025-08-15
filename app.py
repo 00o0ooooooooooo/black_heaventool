@@ -72,15 +72,33 @@ body::after { content:""; display:block; height: var(--reserve, 0px); }
 """, unsafe_allow_html=True)
 
 # ------------------------ Model helpers ------------------------
+# 置換：モデル読み込みを強化
 def load_model_table():
-    here = Path(__file__).resolve().parent
-    for p in [here/"model_bins_v1.csv", Path.cwd()/"model_bins_v1.csv"]:
+    from pathlib import Path
+    import pandas as pd
+    candidates = [
+        Path(__file__).resolve().parent / "model_bins_v1.csv",
+        Path.cwd() / "model_bins_v1.csv",
+        Path.cwd() / "data" / "model_bins_v1.csv",
+        Path.cwd() / "models" / "model_bins_v1.csv",
+    ]
+    for p in candidates:
         if p.exists():
             try:
-                return pd.read_csv(p)
+                return pd.read_csv(p, encoding="utf-8-sig")
             except Exception:
+                # 次の候補を試す
                 pass
     return None
+
+# 読込後すぐ（bin_tbl = load_model_table() の直後あたり）
+status = "OK" if bin_tbl is not None else "NG"
+rows = len(bin_tbl) if bin_tbl is not None else 0
+st.caption(f"📦 モデルCSV: {status}  / rows={rows}  / 期待ファイル名: model_bins_v1.csv")
+if bin_tbl is None:
+    st.error("model_bins_v1.csv が見つかりません。app.py と同じ階層に置いてコミットしてください。"
+             "（.gitignoreの *.csv を外すか `git add -f model_bins_v1.csv`）")
+
 
 def bin_short_pct(p):
     if p < 40: return "<40"
