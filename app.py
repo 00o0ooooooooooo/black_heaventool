@@ -13,13 +13,13 @@ REG_G_DEFAULT   = 24
 COIN_PER_G_DEFAULT = 3.0
 HEAVEN_AVG_GAIN_PER_ROUND_DEFAULT = 120
 
-APP_TITLE = "沖ドキ！BLACK 押し引き v0.48（固定モデル＋スマホUI）"
+APP_TITLE = "沖ドキ！BLACK 押し引き v0.49（固定モデル＋スマホUI）"
 
 st.set_page_config(page_title=APP_TITLE, layout="wide")
 st.markdown(f"## {APP_TITLE}")
-st.caption("入力は「履歴＋現在ハマりG＋（任意で区切り線）」だけ。テンキー位置は上/下を切替できます。")
+st.caption("入力は「履歴＋現在ハマりG＋（任意で区切り線）」だけ。テンキー位置は上/下を切替可能。")
 
-# ---------- Keep scroll position across reruns ----------
+# ---------- Keep scroll position across reruns (Cloud対策) ----------
 st.markdown("""
 <script>
 (() => {
@@ -42,13 +42,13 @@ st.markdown("""
 .stNumberInput input { font-size: 18px; }
 [data-testid="stMetricDelta"] { font-size: 14px !important; }
 
-/* Sticky headers */
+/* Sticky header/footer for keypad */
 .sticky-top {
   position: sticky; top: 0; z-index: 999;
   background: rgba(24,24,28,.98);
   border-bottom: 1px solid rgba(255,255,255,.08);
   padding: .6rem .6rem .8rem .6rem;
-  margin: -0.6rem -0.6rem 0.6rem -0.6rem;
+  margin: -0.6rem -0.6rem .6rem -0.6rem;
 }
 .sticky-bottom {
   position: fixed; left:0; right:0; bottom:0; z-index: 999;
@@ -58,19 +58,16 @@ st.markdown("""
 }
 /* Reserve bottom space when bottom keypad is used */
 body::after { content:""; display:block; height: var(--reserve, 0px); }
-.reserve-bottom { --reserve: 260px; }
-
-/* Keypad columns – 3 fixed columns on mobile as well */
-.keypad-col { padding: 0 .25rem; }
-.keypad-col .stButton>button { width: 100%; min-width: 88px; }
-@media (max-width: 540px) {
-  :root { --btn-h: 56px; }
-  .keypad-col .stButton>button { min-width: 72px; }
-}
+.reserve-bottom { --reserve: 270px; }
 
 /* small note */
 .small-note { color:#aaa; font-size:12px; }
 .badge-warn { background:#5b1e1e; color:#ffb3b3; padding:4px 8px; border-radius:10px; font-weight:600; display:inline-block; }
+
+/* tighten table spacing on mobile */
+@media (max-width: 540px) {
+  :root { --btn-h: 56px; }
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -154,23 +151,23 @@ if bin_tbl is None:
     st.error("model_bins_v1.csv が見つかりません。同じフォルダに置いてください。")
 
 with st.sidebar:
-    mode = st.radio("判定モード", ["保守","標準","攻め"], index=1, horizontal=True)
-    base_per_50 = st.number_input("ベース（50枚で回るG）", min_value=25, max_value=40, value=32, step=1)
-    keypad_pos = st.selectbox("テンキーの位置", ["上（推奨）","下（親指派）"], index=0)
+    mode = st.radio("判定モード", ["保守","標準","攻め"], index=1, horizontal=True, key="mode")
+    base_per_50 = st.number_input("ベース（50枚で回るG）", min_value=25, max_value=40, value=32, step=1, key="baseG")
+    keypad_pos = st.selectbox("テンキーの位置", ["上（推奨）","下（親指派）"], index=0, key="keypad_pos")
     with st.expander("上級設定（普段は不要）", expanded=False):
-        big_pay = st.number_input("BIG平均枚数", 150, 280, BIG_PAY_DEFAULT, 5)
-        reg_pay = st.number_input("REG平均枚数", 50, 150, REG_PAY_DEFAULT, 5)
-        big_g   = st.number_input("BIG中の有利G (+)", 40, 80, BIG_G_DEFAULT, 1)
-        reg_g   = st.number_input("REG中の有利G (+)", 15, 40, REG_G_DEFAULT, 1)
-        coin_per_g = st.number_input("通常時の投入（枚/G）", 1.0, 5.0, COIN_PER_G_DEFAULT, 0.5)
-        heaven_gain = st.number_input("天国1回あたり平均差枚（固定）", 60, 200, HEAVEN_AVG_GAIN_PER_ROUND_DEFAULT, 5)
-        loss_tol = st.number_input("攻め：許容損失X（枚）", 0, 1000, 100, 10)
+        st.number_input("BIG平均枚数", 150, 280, BIG_PAY_DEFAULT, 5, key="big_pay")
+        st.number_input("REG平均枚数", 50, 150, REG_PAY_DEFAULT, 5, key="reg_pay")
+        st.number_input("BIG中の有利G (+)", 40, 80, BIG_G_DEFAULT, 1, key="big_g")
+        st.number_input("REG中の有利G (+)", 15, 40, REG_G_DEFAULT, 1, key="reg_g")
+        st.number_input("通常時の投入（枚/G）", 1.0, 5.0, COIN_PER_G_DEFAULT, 0.5, key="coin_per_g")
+        st.number_input("天国1回あたり平均差枚（固定）", 60, 200, HEAVEN_AVG_GAIN_PER_ROUND_DEFAULT, 5, key="heaven_gain")
+        st.number_input("攻め：許容損失X（枚）", 0, 1000, 100, 10, key="loss_tol")
     st.subheader("例外補正")
-    post_black = st.checkbox("バレ/黒後の可能性", value=False)
-    huge_reg   = st.checkbox("超大ハマREGを直近で引いた", value=False)
+    post_black = st.checkbox("バレ/黒後の可能性", value=False, key="post_black")
+    huge_reg   = st.checkbox("超大ハマREGを直近で引いた", value=False, key="huge_reg")
 
 # 65%換算（model%に写像）と 50%換算
-c = 50.0 / base_per_50
+c = 50.0 / st.session_state["baseG"]
 offset = (1.0 - c/3.0) * 100.0
 model65 = 65.0 - offset
 model50 = 50.0 - offset
@@ -183,6 +180,7 @@ if "undo" not in st.session_state: st.session_state.undo = []
 if "redo" not in st.session_state: st.session_state.redo = []
 if "pending_g_override" not in st.session_state: st.session_state.pending_g_override = 0
 
+# helpers
 def push_undo():
     st.session_state.undo.append(deepcopy(st.session_state.hist_rows))
     st.session_state.redo.clear()
@@ -207,8 +205,7 @@ def _get_pad_int():
     try: return int(st.session_state.pad_value or "0")
     except: return 0
 def _apply_to_pending():
-    n = _get_pad_int()
-    st.session_state.pending_g_override = n
+    st.session_state.pending_g_override = _get_pad_int()
     st.session_state.pad_value = ""
     st.rerun()
 def _add_row(t):
@@ -244,49 +241,41 @@ def _mark_latest_seg():
 # ------------------------ Keypad (fragment) ------------------------
 @st.fragment
 def keypad_fragment(position="top"):
-    # container with sticky styling
     klass = "sticky-top" if position=="top" else "sticky-bottom"
     if position=="bottom":
         st.markdown('<div class="reserve-bottom"></div>', unsafe_allow_html=True)
     st.markdown(f'<div class="{klass}">', unsafe_allow_html=True)
-    st.markdown(f"**クイック入力（テンキー）**　<span class='small-note'>入力値: <b>{st.session_state.pad_value or '—'}</b></span>", unsafe_allow_html=True)
+    st.markdown(f"**クイック入力（テンキー）**　<span class='small-note'>入力値: <b>{st.session_state.pad_value or '—'}</b>　｜　現在ハマり: <b>{int(st.session_state.get('pending_g_override',0))}G</b></span>", unsafe_allow_html=True)
 
     colA, colB, colC, colD = st.columns([1,1,1,1])
     with colA:
-        ca = st.container()
-        with ca:
-            if st.button("1", use_container_width=True): _push_digit("1")
-            if st.button("4", use_container_width=True): _push_digit("4")
-            if st.button("7", use_container_width=True): _push_digit("7")
-            if st.button("⌫", use_container_width=True): _backspace()
+        if st.button("1", use_container_width=True, key="k1"): _push_digit("1")
+        if st.button("4", use_container_width=True, key="k4"): _push_digit("4")
+        if st.button("7", use_container_width=True, key="k7"): _push_digit("7")
+        if st.button("⌫", use_container_width=True, key="kbs"): _backspace()
     with colB:
-        cb = st.container()
-        with cb:
-            if st.button("2", use_container_width=True): _push_digit("2")
-            if st.button("5", use_container_width=True): _push_digit("5")
-            if st.button("8", use_container_width=True): _push_digit("8")
-            if st.button("0", use_container_width=True): _push_digit("0")
+        if st.button("2", use_container_width=True, key="k2"): _push_digit("2")
+        if st.button("5", use_container_width=True, key="k5"): _push_digit("5")
+        if st.button("8", use_container_width=True, key="k8"): _push_digit("8")
+        if st.button("0", use_container_width=True, key="k0"): _push_digit("0")
     with colC:
-        cc = st.container()
-        with cc:
-            if st.button("3", use_container_width=True): _push_digit("3")
-            if st.button("6", use_container_width=True): _push_digit("6")
-            if st.button("9", use_container_width=True): _push_digit("9")
-            if st.button("C", use_container_width=True): _clear()
+        if st.button("3", use_container_width=True, key="k3"): _push_digit("3")
+        if st.button("6", use_container_width=True, key="k6"): _push_digit("6")
+        if st.button("9", use_container_width=True, key="k9"): _push_digit("9")
+        if st.button("C", use_container_width=True, key="kcl"): _clear()
     with colD:
-        cd = st.container()
-        with cd:
-            if st.button("行を追加：BIG", use_container_width=True): _add_row("BIG")
-            if st.button("行を追加：REG", use_container_width=True): _add_row("REG")
-            if st.button("現在ハマりに適用", use_container_width=True): _apply_to_pending()
-            with st.columns(2)[0]:
-                if st.button("末尾を削除", use_container_width=True): _del_last()
-            with st.columns(2)[1]:
-                if st.button("最新に区切る", use_container_width=True): _mark_latest_seg()
+        if st.button("行を追加：BIG", use_container_width=True, key="k_add_big"): _add_row("BIG")
+        if st.button("行を追加：REG", use_container_width=True, key="k_add_reg"): _add_row("REG")
+        if st.button("現在ハマりに適用", use_container_width=True, key="k_apply_pending"): _apply_to_pending()
+        cL, cR = st.columns(2)
+        with cL:
+            if st.button("末尾を削除", use_container_width=True, key="k_del_last"): _del_last()
+        with cR:
+            if st.button("最新に区切る", use_container_width=True, key="k_seg_latest"): _mark_latest_seg()
     st.markdown('</div>', unsafe_allow_html=True)
 
 # Show keypad at chosen position
-keypad_fragment("top" if keypad_pos.startswith("上") else "bottom")
+keypad_fragment("top" if st.session_state["keypad_pos"].startswith("上") else "bottom")
 
 # ------------------------ History ------------------------
 st.markdown("### 履歴")
@@ -300,24 +289,24 @@ grid = st.data_editor(
         "Type": st.column_config.SelectboxColumn("種別", options=["BIG","REG"]),
         "セグ開始": st.column_config.CheckboxColumn("ここから区切る")
     },
-    key="hist_editor_v048"
+    key="hist_editor_v049"
 )
 st.session_state.hist_rows = grid.to_dict(orient="records")
 
 cols = st.columns([1,1,1,1,1])
 with cols[0]:
-    if st.button("リセット（履歴を空に）", use_container_width=True): _reset_all()
+    if st.button("リセット（履歴を空に）", use_container_width=True, key="h_reset"): _reset_all()
 with cols[1]:
-    if st.button("1つ削除（末尾）", use_container_width=True): _del_last()
+    if st.button("1つ削除（末尾）", use_container_width=True, key="h_del_last"): _del_last()
 with cols[2]:
     idx = st.number_input("削除する行#", min_value=0, max_value=max(0,len(st.session_state.hist_rows)-1), value=0, step=1, key="del_idx")
 with cols[3]:
-    if st.button("↑ 行を削除", use_container_width=True): _delete_one_row(st.session_state.get("del_idx",0))
+    if st.button("↑ 行を削除", use_container_width=True, key="h_del_row"): _delete_one_row(st.session_state.get("del_idx",0))
 with cols[4]:
-    if st.button("最新に区切る", use_container_width=True): _mark_latest_seg()
+    if st.button("最新に区切る", use_container_width=True, key="h_seg_latest"): _mark_latest_seg()
 
 pending_default = int(st.session_state.get("pending_g_override", 0))
-pending_g = st.number_input("現在のハマりG（未当選）", min_value=0, max_value=5000, value=pending_default, step=10)
+pending_g = st.number_input("現在のハマりG（未当選）", min_value=0, max_value=5000, value=pending_default, step=10, key="pending_input")
 
 # ------------------------ Compute ------------------------
 df = pd.DataFrame(st.session_state.hist_rows, columns=["IntervalG","Type","セグ開始"]).dropna(subset=["IntervalG","Type"])
@@ -326,10 +315,14 @@ true_idx = [i for i, v in enumerate(df.get("セグ開始", [])) if bool(v)]
 seg_start_pos = true_idx[-1] if true_idx else None
 seg_df = df.iloc[seg_start_pos+1:] if seg_start_pos is not None else df
 
-params = dict(big_pay=BIG_PAY_DEFAULT, reg_pay=REG_PAY_DEFAULT, big_g=BIG_G_DEFAULT, reg_g=REG_G_DEFAULT, coin_per_g=COIN_PER_G_DEFAULT)
+params = dict(
+    big_pay=BIG_PAY_DEFAULT, reg_pay=REG_PAY_DEFAULT,
+    big_g=BIG_G_DEFAULT, reg_g=REG_G_DEFAULT,
+    coin_per_g=COIN_PER_G_DEFAULT
+)
 stats = compute_segment_stats(seg_df, pending_g, params)
 cum_adv, short_pct_model = stats["cum_adv"], stats["short_pct_model"]
-equiv_pct = (short_pct_model + (1.0 - (50.0/base_per_50)/3.0) * 100.0) if np.isfinite(short_pct_model) else np.nan
+equiv_pct = (short_pct_model + (1.0 - (50.0/st.session_state["baseG"])/3.0) * 100.0) if np.isfinite(short_pct_model) else np.nan
 
 dist1600 = max(0, int(1600 - cum_adv))
 dist3500 = max(0, int(3500 - cum_adv))
@@ -344,7 +337,12 @@ if bin_tbl is not None and np.isfinite(short_pct_model):
 else:
     p, E_len, p_le2, b1, b2, n_info = 28.0, 3.2, 50.0, "n/a", "n/a", ""
 
-dP, dE, dLe2 = regional_adjust(cum_adv, short_pct_model if np.isfinite(short_pct_model) else 60.0, model65, model50, pending_g, {"post_black":post_black,"huge_reg":huge_reg})
+dP, dE, dLe2 = regional_adjust(
+    cum_adv,
+    short_pct_model if np.isfinite(short_pct_model) else 60.0,
+    model65, model50, pending_g,
+    {"post_black": st.session_state["post_black"], "huge_reg": st.session_state["huge_reg"]}
+)
 p_adj = clip_pct(p + dP); E_len_adj = max(1.0, E_len + dE); p_le2_adj = clip01(p_le2 + dLe2)
 
 candidates = [None, 1600, 1750, 2000, 3300, 3500, 3700]
@@ -368,7 +366,7 @@ with c1:
     st.metric("P(天国)", f"{p_adj:.1f} %", help=f"bin: {b1}×{b2} {n_info}")
 with c2:
     if np.isfinite(short_pct_model):
-        st.metric("model% / equiv%", f"{short_pct_model:.1f} % / {equiv_pct:.1f} %", help=f"65%換算の目安: model%≧{model65:.1f}%（ベース{base_per_50}G/50枚）")
+        st.metric("model% / equiv%", f"{short_pct_model:.1f} % / {equiv_pct:.1f} %", help=f"65%換算の目安: model%≧{model65:.1f}%（ベース{st.session_state['baseG']}G/50枚）")
     else:
         st.metric("model% / equiv%", "—", help="データ不足")
 with c3:
