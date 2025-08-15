@@ -13,7 +13,7 @@ REG_G_DEFAULT   = 24
 COIN_PER_G_DEFAULT = 3.0
 HEAVEN_AVG_GAIN_PER_ROUND_DEFAULT = 120
 
-APP_TITLE = "沖ドキ！BLACK 押し引き v0.49（固定モデル＋スマホUI）"
+APP_TITLE = "沖ドキ！BLACK 押し引き v0.50（固定モデル＋スマホUI）"
 
 st.set_page_config(page_title=APP_TITLE, layout="wide")
 st.markdown(f"## {APP_TITLE}")
@@ -74,8 +74,12 @@ body::after { content:""; display:block; height: var(--reserve, 0px); }
 # ------------------------ Model helpers ------------------------
 # 置換：モデル読み込みを強化
 def load_model_table():
+<<<<<<< HEAD
     from pathlib import Path
     import pandas as pd
+=======
+    """Try multiple locations and tolerate BOM/TSV mistakes."""
+>>>>>>> okidoki black helper v0.49: fix keys, scroll, empty-history, mobile keypad
     candidates = [
         Path(__file__).resolve().parent / "model_bins_v1.csv",
         Path.cwd() / "model_bins_v1.csv",
@@ -84,13 +88,28 @@ def load_model_table():
     ]
     for p in candidates:
         if p.exists():
+            # try normal CSV with utf-8-sig first
             try:
+<<<<<<< HEAD
                 return pd.read_csv(p, encoding="utf-8-sig")
+=======
+                df = pd.read_csv(p, encoding="utf-8-sig")
+                if "bin_pct" in df.columns and "bin_adv" in df.columns:
+                    return df
+            except Exception:
+                pass
+            # if looks like TSV, try tab
+            try:
+                df = pd.read_csv(p, sep="\t", encoding="utf-8-sig")
+                if "bin_pct" in df.columns and "bin_adv" in df.columns:
+                    return df
+>>>>>>> okidoki black helper v0.49: fix keys, scroll, empty-history, mobile keypad
             except Exception:
                 # 次の候補を試す
                 pass
     return None
 
+<<<<<<< HEAD
 # 読込後すぐ（bin_tbl = load_model_table() の直後あたり）
 status = "OK" if bin_tbl is not None else "NG"
 rows = len(bin_tbl) if bin_tbl is not None else 0
@@ -99,6 +118,18 @@ if bin_tbl is None:
     st.error("model_bins_v1.csv が見つかりません。app.py と同じ階層に置いてコミットしてください。"
              "（.gitignoreの *.csv を外すか `git add -f model_bins_v1.csv`）")
 
+=======
+bin_tbl = load_model_table()
+
+# 読込ステータスを表示（デバッグ用）
+status = "OK" if bin_tbl is not None else "NG"
+rows = len(bin_tbl) if bin_tbl is not None else 0
+cols = ", ".join(bin_tbl.columns) if bin_tbl is not None else "-"
+st.caption(f"📦 モデルCSV: {status} / rows={rows} / cols=[{cols}] / 期待名: model_bins_v1.csv")
+if bin_tbl is None:
+    st.error("model_bins_v1.csv が読めていません。app.py と同じ階層に置き、.gitignoreに弾かれていないか確認。"
+             "必要なら `git add -f model_bins_v1.csv` を実行してください。")
+>>>>>>> okidoki black helper v0.49: fix keys, scroll, empty-history, mobile keypad
 
 def bin_short_pct(p):
     if p < 40: return "<40"
@@ -164,10 +195,6 @@ def lookup_model(bin_tbl, short_pct_model, cum_adv):
     return {"p_trig": float(r["p_trig_sm"])*100.0, "E_len": float(r["E_len_sm"]), "p_le2": float(r["p_le2_sm"])*100.0, "n": int(r["n"]), "n_pos": int(r["n_pos"]) if not pd.isna(r["n_pos"]) else 0}, b1, b2
 
 # ------------------------ Sidebar ------------------------
-bin_tbl = load_model_table()
-if bin_tbl is None:
-    st.error("model_bins_v1.csv が見つかりません。同じフォルダに置いてください。")
-
 with st.sidebar:
     mode = st.radio("判定モード", ["保守","標準","攻め"], index=1, horizontal=True, key="mode")
     base_per_50 = st.number_input("ベース（50枚で回るG）", min_value=25, max_value=40, value=32, step=1, key="baseG")
@@ -202,18 +229,6 @@ if "pending_g_override" not in st.session_state: st.session_state.pending_g_over
 def push_undo():
     st.session_state.undo.append(deepcopy(st.session_state.hist_rows))
     st.session_state.redo.clear()
-
-def do_undo():
-    if st.session_state.undo:
-        st.session_state.redo.append(deepcopy(st.session_state.hist_rows))
-        st.session_state.hist_rows = st.session_state.undo.pop()
-        st.rerun()
-
-def do_redo():
-    if st.session_state.redo:
-        st.session_state.undo.append(deepcopy(st.session_state.hist_rows))
-        st.session_state.hist_rows = st.session_state.redo.pop()
-        st.rerun()
 
 # keypad handlers
 def _push_digit(d): st.session_state.pad_value = (st.session_state.pad_value + d)[:4]; st.rerun()
@@ -297,7 +312,6 @@ keypad_fragment("top" if st.session_state["keypad_pos"].startswith("上") else "
 
 # ------------------------ History ------------------------
 st.markdown("### 履歴")
-# ensure schema even when empty
 hist_rows = st.session_state.hist_rows or []
 df_init = pd.DataFrame(hist_rows, columns=["IntervalG","Type","セグ開始"])
 grid = st.data_editor(
@@ -307,7 +321,7 @@ grid = st.data_editor(
         "Type": st.column_config.SelectboxColumn("種別", options=["BIG","REG"]),
         "セグ開始": st.column_config.CheckboxColumn("ここから区切る")
     },
-    key="hist_editor_v049"
+    key="hist_editor_v050"
 )
 st.session_state.hist_rows = grid.to_dict(orient="records")
 
