@@ -322,6 +322,22 @@ st.markdown("#### 区切り操作（指一本）")
 
 N = len(st.session_state.hist_rows)
 
+# ここを追加：前回の slider 値が残っていると範囲外で落ちるため、クランプしてから描画
+if "seg_slider_v051" in st.session_state:
+    try:
+        v = int(st.session_state.seg_slider_v051)
+    except Exception:
+        v = 1
+else:
+    v = 1
+
+if N >= 1:
+    v = max(1, min(v, N))   # [1, N] に収める
+else:
+    v = 1                   # 履歴が空の時のダミー
+
+st.session_state.seg_slider_v051 = v
+
 def current_seg_1based() -> int:
     try:
         idxs = [i for i, r in enumerate(st.session_state.hist_rows) if bool(r.get("セグ開始"))]
@@ -330,8 +346,15 @@ def current_seg_1based() -> int:
         return N if N > 0 else 1
 
 if N > 0:
-    seg_pos_1 = st.slider("区切り行（1〜N）", 1, N, value=current_seg_1based(), key="seg_slider_v051",
-                          help="この行の“直後”から現在までをアクティブ区間にします。")
+    seg_pos_1 = st.slider(
+        "区切り行（1〜N）",
+        min_value=1,
+        max_value=N,
+        value=st.session_state.seg_slider_v051,   # ここは state を使う
+        key="seg_slider_v051",
+        help="この行の“直後”から現在までをアクティブ区間にします。",
+    )
+
     cL, cC, cR = st.columns([1,1,2])
     with cL:
         if st.button("−", use_container_width=True):
@@ -359,32 +382,6 @@ if N > 0:
         st.rerun()
 else:
     st.info("履歴が空です。行を追加してから区切りを設定してください。")
-
-
-# ------------------------ 計算ヘルパ ------------------------
-def active_segment_rows(rows: List[Dict]) -> List[Dict]:
-    if not rows:
-        return []
-    idxs = [i for i, r in enumerate(rows) if bool(r.get("セグ開始"))]
-    start = (idxs[-1] + 1) if idxs else 0
-    return rows[start:]  # start の次行から末尾まで
-
-def calc_metrics(rows: List[Dict], now_hamari_g: int, conf: Dict) -> Dict:
-    """
-    簡易版の集計：
-      - coin_in: (通常G)×coin_in_g
-      - payout: BIG/REG 平均差枚の合計
-      - short%: 100 * payout / coin_in
-      - adv_g: 通常G + BIG/REGの+G + 現在ハマり
-      - モデルから p_trig, E_len, p_le2 を取得
-      - ざっくりEV: p_trig * (E_len*heaven_avg_diff) - now_hamari_g*coin_in_g
-    """
-    if not rows and now_hamari_g <= 0:
-        return {
-            "coin_in": 0, "payout": 0, "short_pct": 0, "adv_g": 0,
-            "p_trig": 0.28, "e_len": 3.2, "p_le2": 0.5, "bin": "n/a×n/a",
-            "ev": 0
-        }
 
     # 時系列に並べ替え（上から/下から入力を許すため）
     df = pd.DataFrame(rows)
